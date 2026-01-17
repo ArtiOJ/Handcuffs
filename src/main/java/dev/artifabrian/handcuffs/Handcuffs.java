@@ -24,7 +24,7 @@ public final class Handcuffs extends JavaPlugin {
         handcuffsData = new HandcuffsData(this);
 
         new GetHandcuffsCommand(this);
-        new HandcuffLogic(this);
+        new HandcuffLogic(this, 0);
     }
 
     @Override
