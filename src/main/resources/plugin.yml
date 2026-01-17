@@ -1,0 +1,4 @@
+name: Handcuffs
+version: '1.0-SNAPSHOT'
+main: dev.artifabrian.handcuffs.Handcuffs
+api-version: '1.21'
