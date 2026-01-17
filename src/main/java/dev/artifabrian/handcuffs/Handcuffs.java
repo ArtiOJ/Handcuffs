@@ -1,5 +1,6 @@
 package dev.artifabrian.handcuffs;
 
+import dev.artifabrian.handcuffs.commands.GetHandcuffsCommand;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -16,11 +17,14 @@ public final class Handcuffs extends JavaPlugin {
 
     HandcuffsData handcuffsData;
 
+
     @Override
     public void onEnable() {
         // Plugin startup logic
         handcuffsData = new HandcuffsData(this);
 
+        new GetHandcuffsCommand(this);
+        new HandcuffLogic(this);
     }
 
     @Override

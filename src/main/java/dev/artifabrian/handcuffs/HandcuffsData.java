@@ -31,7 +31,7 @@ public class HandcuffsData {
 
     public void save() {
         try {
-            config.save();
+            config.save(file);
         } catch (Exception e) {
             e.printStackTrace();
         }

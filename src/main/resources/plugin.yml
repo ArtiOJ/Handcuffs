@@ -9,4 +9,3 @@ commands:
       - cuffs
       - givehandcuffs
       - givecuffs
-    usage: /command
