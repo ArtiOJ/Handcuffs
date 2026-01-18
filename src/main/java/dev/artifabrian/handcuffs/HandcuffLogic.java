@@ -2,6 +2,9 @@ package dev.artifabrian.handcuffs;
 
 import dev.artifabrian.handcuffs.util.Colorize;
 import org.bukkit.*;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.block.Block;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
@@ -15,10 +18,14 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
+import org.checkerframework.checker.units.qual.N;
+import org.w3c.dom.Attr;
 
 import java.util.*;
 
@@ -284,6 +291,13 @@ public class HandcuffLogic implements Listener {
 
         player.getWorld().playSound(player.getLocation(), Sound.BLOCK_CHAIN_BREAK, 1f, 1f);
         player.getWorld().playSound(player.getLocation(), Sound.BLOCK_WOODEN_TRAPDOOR_OPEN, 0.8f, 1.2f);
+
+        player.setGameMode(GameMode.SURVIVAL);
+        AttributeInstance attr2 = player.getAttribute(Attribute.ATTACK_DAMAGE);
+        if (attr2 != null) {
+            attr2.removeModifier(new NamespacedKey(plugin, "cuff_damage"));
+        }
+
         cuffedPlayersMap.remove(player);
     }
 
@@ -297,6 +311,13 @@ public class HandcuffLogic implements Listener {
 
         player.getWorld().playSound(player.getLocation(), Sound.ITEM_LEAD_BREAK, 0.9F, 1.0F);
         player.getWorld().playSound(player.getLocation(), Sound.BLOCK_CHAIN_HIT, 0.5F, 1.2F);
+
+        player.setGameMode(GameMode.SURVIVAL);
+        AttributeInstance attr2 = player.getAttribute(Attribute.ATTACK_DAMAGE);
+        if (attr2 != null) {
+            attr2.removeModifier(new NamespacedKey(plugin, "cuff_damage"));
+        }
+
         blockCuffMap.remove(player);
     }
 
@@ -316,6 +337,13 @@ public class HandcuffLogic implements Listener {
         player.getLocation().getWorld().playSound(player.getLocation(), Sound.BLOCK_CHAIN_PLACE, 1f, 1f);
         player.getLocation().getWorld().playSound(player.getLocation(), Sound.ITEM_ARMOR_EQUIP_IRON, 0.5f, 1f);
 
+        player.setGameMode(GameMode.ADVENTURE);
+        AttributeInstance attr2 = player.getAttribute(Attribute.ATTACK_DAMAGE);
+        if (attr2 != null) {
+            AttributeModifier modifier = new AttributeModifier(new NamespacedKey(plugin, "cuff_damage"), -100.0, AttributeModifier.Operation.ADD_NUMBER);
+            attr2.addModifier(modifier);
+        }
+Add
         cuffedPlayersMap.putIfAbsent(player, captor);
         start();
     }
@@ -325,7 +353,7 @@ public class HandcuffLogic implements Listener {
         player.getLocation().getWorld().playSound(block.getLocation(), Sound.ITEM_LEAD_TIED, 0.7F, 1.1F);
 
         player.sendMessage(Colorize.format("&cYou have been tied to a fence post!"));
-        captor.sendMessage("&cYou have tied " + ChatColor.GOLD + player.getName() + " to the post");
+        captor.sendMessage(Colorize.format("&cYou have tied " + ChatColor.GOLD + player.getName() + "&c to the post"));
 
         blockCuffMap.put(player, block);
         cuffedPlayersMap.remove(player);
