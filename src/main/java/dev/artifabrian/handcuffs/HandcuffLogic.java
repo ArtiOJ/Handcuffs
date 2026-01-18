@@ -2,17 +2,16 @@ package dev.artifabrian.handcuffs;
 
 import dev.artifabrian.handcuffs.util.Colorize;
 import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.event.player.PlayerInteractAtEntityEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerKickEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitScheduler;
@@ -32,6 +31,7 @@ public class HandcuffLogic implements Listener {
     private BossBar bar;
     private Map<Player, BossBar> cuffBars = new HashMap<>();
     private Map<Player, Player> disconnectedMap = new HashMap<>();
+    private Map<Player, Block> blockCuffMap = new HashMap<>();
 
 
     private static final double HORIZONTAL_PULL_MULTIPLIER = 0.02; // strength per block of distance
@@ -74,6 +74,20 @@ public class HandcuffLogic implements Listener {
         }
 
         capture(interactedPlayer, player);
+    }
+
+    @EventHandler
+    public void onPlayerHit(PlayerInteractEvent event) {
+        if (event.getAction() != Action.LEFT_CLICK_BLOCK) return;
+        Block block = event.getClickedBlock();
+
+        if (!block.getType().toString().endsWith("_FENCE")) return;
+
+        Player player = event.getPlayer();
+        if (!cuffedPlayersMap.containsValue(player)) return;
+
+        Player captive = getKeyByValue(cuffedPlayersMap, player);
+        tieToPost(captive, block);
     }
 
     @EventHandler
@@ -122,7 +136,7 @@ public class HandcuffLogic implements Listener {
 
 
     private void cuffLogic() {
-        if (cuffedPlayersMap.isEmpty()) {
+        if (cuffedPlayersMap.isEmpty() && blockCuffMap.isEmpty()) {
             stop();
             return;
         }
@@ -189,7 +203,7 @@ public class HandcuffLogic implements Listener {
                         v.setY(0.42);
                         player.setVelocity(v);
                     }
-                    return;
+                    continue;
                 }
             }
 
@@ -200,6 +214,29 @@ public class HandcuffLogic implements Listener {
             if (distance > MIN_PULL_DISTANCE) {
                 if (distance > MIN_TELEPORT_DISTANCE) {
                     player.teleport(captor);
+                    continue;
+                }
+                player.setVelocity(player.getVelocity().add(pull));
+            }
+        }
+
+        for (Player player : blockCuffMap.keySet()) {
+            Block block = blockCuffMap.get(player);
+            if (!player.getLocation().getWorld().equals(block.getLocation().getWorld())) {
+                player.teleport(block.getLocation().add(0, 1, 0));
+                continue;
+            }
+
+            Vector dir = block.getLocation().toVector().subtract(player.getLocation().toVector());
+            double distance = dir.length();
+            dir.normalize();
+
+            double strength = Math.min(HORIZONTAL_PULL_MULTIPLIER * distance, MAX_PULL_STRENGTH);
+            Vector pull = dir.multiply(strength);
+
+            if (distance > MIN_PULL_DISTANCE) {
+                if (distance > MIN_TELEPORT_DISTANCE) {
+                    player.teleport(block.getLocation().add(0, 1, 0));
                     continue;
                 }
                 player.setVelocity(player.getVelocity().add(pull));
@@ -259,5 +296,13 @@ public class HandcuffLogic implements Listener {
 
         cuffedPlayersMap.putIfAbsent(player, captor);
         start();
+    }
+
+    private void tieToPost(Player player, Block block) {
+        player.getLocation().getWorld().playSound(block.getLocation(), Sound.BLOCK_CHAIN_PLACE, 1.0F, 1.0F);
+        player.getLocation().getWorld().playSound(block.getLocation(), Sound.ITEM_LEAD_TIED, 0.7F, 1.1F);
+
+        blockCuffMap.put(player, block);
+        cuffedPlayersMap.remove(player);
     }
 }
