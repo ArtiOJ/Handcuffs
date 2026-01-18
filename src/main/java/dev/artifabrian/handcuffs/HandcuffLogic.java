@@ -66,6 +66,7 @@ public class HandcuffLogic implements Listener {
 
         Bukkit.broadcastMessage(Colorize.format("&cYou have handcuffed " + interactedPlayer.getName()));
         cuffedPlayersMap.put(interactedPlayer, player);
+        start();
     }
 
     private void start() {
