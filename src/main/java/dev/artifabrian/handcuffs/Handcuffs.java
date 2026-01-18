@@ -37,8 +37,15 @@ public final class Handcuffs extends JavaPlugin {
         ItemMeta meta = item.getItemMeta();
         NamespacedKey namespacedKey = new NamespacedKey(this, "cuff_item");
         meta.getPersistentDataContainer().set(namespacedKey, PersistentDataType.BOOLEAN, true);
-        meta.displayName(Component.text("Temporary Cuff Item"));
-        meta.lore(List.of(Component.text("Temporary Lore Text")));
+        meta.displayName(Component.text("&6&lHandcuffs"));
+        meta.lore(List.of(Component.text(
+                "&7Standard-issue restraints used by law enforcement\n" +
+                "&7to safely detain and control civilians.\n" +
+                "&7Designed to limit movement and prevent resistance.\n" +
+                "\n" +
+                "&8&oRight-click a player to handcuff or unhandcuff them.\n" +
+                "&8&oLeft-click a post to secure a handcuffed player.\n" +
+                "&8&oHandcuffed players cannot attack or break blocks.")));
         item.setItemMeta(meta);
         return item;
     }
