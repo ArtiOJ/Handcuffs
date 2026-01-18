@@ -322,7 +322,7 @@ public class HandcuffLogic implements Listener {
     }
 
     private void capture(Player player, Player captor) {
-        captor.sendMessage(Colorize.format("&cYou have handcuffed " + player.getName()));
+        captor.sendMessage(Colorize.format("&cYou have handcuffed " + ChatColor.GOLD + player.getName()));
 
         bar = Bukkit.createBossBar(ChatColor.RED + "⛓ You have been cuffed by " + ChatColor.GOLD + captor.getName(),
                 BarColor.RED,
@@ -343,7 +343,7 @@ public class HandcuffLogic implements Listener {
             AttributeModifier modifier = new AttributeModifier(new NamespacedKey(plugin, "cuff_damage"), -100.0, AttributeModifier.Operation.ADD_NUMBER);
             attr2.addModifier(modifier);
         }
-Add
+
         cuffedPlayersMap.putIfAbsent(player, captor);
         start();
     }
