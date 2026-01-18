@@ -139,6 +139,12 @@ public class HandcuffLogic implements Listener {
         }
         if (cuffedPlayersMap.containsValue(player)) {
             cuffedPlayersMap.entrySet().removeIf(entry -> entry.getValue().equals(player));
+
+            player.sendMessage(Colorize.format("&cYou have been uncuffed by by " + ChatColor.GOLD + player.getName()));
+            BossBar bar = cuffBars.get(player);
+            bar.removeAll();
+            cuffBars.remove(player);
+
         }
     }
 
