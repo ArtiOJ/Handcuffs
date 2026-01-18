@@ -6,11 +6,11 @@ import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerInteractAtEntityEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerKickEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -45,14 +45,12 @@ public class HandcuffLogic implements Listener {
 
         scheduler = Bukkit.getScheduler();
 
-
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
 
     @EventHandler
     public void onRightClick(PlayerInteractAtEntityEvent event) {
-
         if (event.getHand() != EquipmentSlot.HAND) return;
 
         Player player = event.getPlayer();
@@ -63,15 +61,7 @@ public class HandcuffLogic implements Listener {
         if (!(event.getRightClicked() instanceof Player interactedPlayer)) return;
 
         if (cuffedPlayersMap.containsKey(interactedPlayer) && Objects.equals(cuffedPlayersMap.get(interactedPlayer), player)) {
-            player.sendMessage(Colorize.format("&cYou have unhandcuffed " + interactedPlayer.getName()));
-            interactedPlayer.sendMessage(Colorize.format("&cYou have been uncuffed by by " + ChatColor.GOLD + player.getName()));
-            BossBar bar = cuffBars.get(interactedPlayer);
-            bar.removeAll();
-            cuffBars.remove(interactedPlayer);
-
-            player.getWorld().playSound(interactedPlayer.getLocation(), Sound.BLOCK_CHAIN_BREAK, 1f, 1f);
-            player.getWorld().playSound(interactedPlayer.getLocation(), Sound.BLOCK_WOODEN_TRAPDOOR_OPEN, 0.8f, 1.2f);
-            cuffedPlayersMap.remove(interactedPlayer);
+            free(interactedPlayer, player);
             return;
         }
         if (cuffedPlayersMap.containsValue(player)) {
@@ -83,28 +73,20 @@ public class HandcuffLogic implements Listener {
             return;
         }
 
-        player.sendMessage(Colorize.format("&cYou have handcuffed " + interactedPlayer.getName()));
-
-        bar = Bukkit.createBossBar(ChatColor.RED + "⛓ You have been cuffed by " + ChatColor.GOLD + player.getName(),
-                BarColor.RED,
-                BarStyle.SEGMENTED_10
-        );
-        bar.setProgress(1.0);
-        bar.addPlayer(interactedPlayer);
-        bar.setVisible(true);
-
-        cuffBars.put(interactedPlayer, bar);
-
-        player.getLocation().getWorld().playSound(interactedPlayer.getLocation(), Sound.BLOCK_CHAIN_PLACE, 1f, 1f);
-        player.getLocation().getWorld().playSound(interactedPlayer.getLocation(), Sound.ITEM_ARMOR_EQUIP_IRON, 0.5f, 1f);
-
-        cuffedPlayersMap.put(interactedPlayer, player);
-        start();
+        capture(interactedPlayer, player);
     }
 
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
-        playerDisconnect(event.getPlayer());
+        Player player = event.getPlayer();
+        if (!cuffedPlayersMap.containsValue(player) && !cuffedPlayersMap.containsKey(player)) return;
+        if (cuffedPlayersMap.containsKey(player)) {
+            free(player, cuffedPlayersMap.get(player));
+            return;
+        }
+
+        Player captive = getKeyByValue(cuffedPlayersMap, player);
+        free(captive, player);
     }
 
     @EventHandler
@@ -114,52 +96,30 @@ public class HandcuffLogic implements Listener {
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
+        playerDisconnect(event.getPlayer());
+    }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        if (!cuffedPlayersMap.containsValue(player) || !cuffedPlayersMap.containsKey(player)) return;
+        if (!disconnectedMap.containsKey(player)) return;
+
+        capture(player, disconnectedMap.get(player));
+        disconnectedMap.remove(player);
+    }
+
+    private void playerDisconnect(Player player) {
+        if (!cuffedPlayersMap.containsValue(player) && !cuffedPlayersMap.containsKey(player)) return;
         if (cuffedPlayersMap.containsKey(player)) {
             disconnectedMap.put(player, cuffedPlayersMap.get(player));
             cuffedPlayersMap.remove(player);
             return;
         }
-        cuffedPlayersMap.entrySet().removeIf(entry -> entry.getValue().equals(player));
 
-        player.sendMessage(Colorize.format("&cYou have been uncuffed by by " + ChatColor.GOLD + player.getName()));
-        BossBar bar = cuffBars.get(player);
-        bar.removeAll();
-        cuffBars.remove(player);
-
-        player.getWorld().playSound(player.getLocation(), Sound.BLOCK_CHAIN_BREAK, 1f, 1f);
-        player.getWorld().playSound(player.getLocation(), Sound.BLOCK_WOODEN_TRAPDOOR_OPEN, 0.8f, 1.2f);
+        Player captive = getKeyByValue(cuffedPlayersMap, player);
+        free(captive, player);
     }
 
-    private void playerDisconnect(Player player) {
-        if (cuffedPlayersMap.containsKey(player)) {
-            cuffedPlayersMap.remove(player);
-            return;
-        }
-        if (cuffedPlayersMap.containsValue(player)) {
-            cuffedPlayersMap.entrySet().removeIf(entry -> entry.getValue().equals(player));
-
-            player.sendMessage(Colorize.format("&cYou have been uncuffed by by " + ChatColor.GOLD + player.getName()));
-            BossBar bar = cuffBars.get(player);
-            bar.removeAll();
-            cuffBars.remove(player);
-
-        }
-    }
-
-    private void start() {
-        if (task != null) return;
-
-        task = scheduler.runTaskTimer(plugin, this::cuffLogic, 0L, 1L);
-    }
-
-    private void stop() {
-        if (task == null) return;
-
-        task.cancel();
-        task = null;
-    }
 
     private void cuffLogic() {
         if (cuffedPlayersMap.isEmpty()) {
@@ -245,5 +205,59 @@ public class HandcuffLogic implements Listener {
                 player.setVelocity(player.getVelocity().add(pull));
             }
         }
+    }
+
+    private void start() {
+        if (task != null) return;
+
+        task = scheduler.runTaskTimer(plugin, this::cuffLogic, 0L, 1L);
+    }
+
+    private void stop() {
+        if (task == null) return;
+
+        task.cancel();
+        task = null;
+    }
+
+    private <K, V> K getKeyByValue(Map<K, V> map, V targetValue) {
+        for (Map.Entry<K, V> entry : map.entrySet()) {
+            if (entry.getValue().equals(targetValue)) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+
+    private void free(Player player, Player captor) {
+        captor.sendMessage(Colorize.format("&cYou have unhandcuffed " + player.getName()));
+        player.sendMessage(Colorize.format("&cYou have been uncuffed by by " + ChatColor.GOLD + captor.getName()));
+        BossBar bar = cuffBars.get(player);
+        bar.removePlayer(player);
+        cuffBars.remove(player);
+
+        player.getWorld().playSound(player.getLocation(), Sound.BLOCK_CHAIN_BREAK, 1f, 1f);
+        player.getWorld().playSound(player.getLocation(), Sound.BLOCK_WOODEN_TRAPDOOR_OPEN, 0.8f, 1.2f);
+        cuffedPlayersMap.remove(player);
+    }
+
+    private void capture(Player player, Player captor) {
+        captor.sendMessage(Colorize.format("&cYou have handcuffed " + player.getName()));
+
+        bar = Bukkit.createBossBar(ChatColor.RED + "⛓ You have been cuffed by " + ChatColor.GOLD + captor.getName(),
+                BarColor.RED,
+                BarStyle.SEGMENTED_10
+        );
+        bar.setProgress(1.0);
+        bar.addPlayer(player);
+        bar.setVisible(true);
+
+        cuffBars.putIfAbsent(player, bar);
+
+        player.getLocation().getWorld().playSound(player.getLocation(), Sound.BLOCK_CHAIN_PLACE, 1f, 1f);
+        player.getLocation().getWorld().playSound(player.getLocation(), Sound.ITEM_ARMOR_EQUIP_IRON, 0.5f, 1f);
+
+        cuffedPlayersMap.putIfAbsent(player, captor);
+        start();
     }
 }
