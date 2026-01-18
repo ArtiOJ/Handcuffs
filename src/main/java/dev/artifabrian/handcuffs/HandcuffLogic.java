@@ -70,7 +70,7 @@ public class HandcuffLogic implements Listener {
             return;
         }
         if (cuffedPlayersMap.containsKey(interactedPlayer) || blockCuffMap.containsKey(interactedPlayer)) {
-            player.sendMessage(Colorize.format("&cThis player is already handcuffed!"));
+            player.sendMessage(Colorize.format(ChatColor.GOLD + interactedPlayer.getName() + "&c is already handcuffed!"));
             return;
         }
 
@@ -88,7 +88,7 @@ public class HandcuffLogic implements Listener {
         if (!cuffedPlayersMap.containsValue(player)) return;
 
         Player captive = getKeyByValue(cuffedPlayersMap, player);
-        tieToPost(captive, block);
+        tieToPost(captive, block, player);
     }
 
     @EventHandler
@@ -276,7 +276,7 @@ public class HandcuffLogic implements Listener {
     }
 
     private void free(Player player, Player captor) {
-        captor.sendMessage(Colorize.format("&cYou have unhandcuffed " + player.getName()));
+        captor.sendMessage(Colorize.format("&cYou have unhandcuffed " + ChatColor.GOLD + player.getName()));
         player.sendMessage(Colorize.format("&cYou have been uncuffed by by " + ChatColor.GOLD + captor.getName()));
         BossBar bar = cuffBars.get(player);
         bar.removePlayer(player);
@@ -320,11 +320,12 @@ public class HandcuffLogic implements Listener {
         start();
     }
 
-    private void tieToPost(Player player, Block block) {
+    private void tieToPost(Player player, Block block, Player captor) {
         player.getLocation().getWorld().playSound(block.getLocation(), Sound.BLOCK_CHAIN_PLACE, 1.0F, 1.0F);
         player.getLocation().getWorld().playSound(block.getLocation(), Sound.ITEM_LEAD_TIED, 0.7F, 1.1F);
 
         player.sendMessage(Colorize.format("&cYou have been tied to a fence post!"));
+        captor.sendMessage("&cYou have tied " + ChatColor.GOLD + player.getName() + " to the post");
 
         blockCuffMap.put(player, block);
         cuffedPlayersMap.remove(player);
