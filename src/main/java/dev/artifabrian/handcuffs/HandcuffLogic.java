@@ -82,6 +82,10 @@ public class HandcuffLogic implements Listener {
     }
 
     private void cuffLogic() {
+        if (cuffedPlayersMap.isEmpty()) {
+            stop();
+            return;
+        }
         for (Player player : cuffedPlayersMap.keySet()) {
             Player captor = cuffedPlayersMap.get(player);
             if (player.getLocation().getWorld().equals(captor.getLocation().getWorld())) {
