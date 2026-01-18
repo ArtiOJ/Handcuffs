@@ -2,7 +2,9 @@ package dev.artifabrian.handcuffs;
 
 import dev.artifabrian.handcuffs.util.Colorize;
 import org.bukkit.*;
-import org.bukkit.block.Block;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
+import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -23,14 +25,14 @@ public class HandcuffLogic implements Listener {
     private Map<Player, Player> cuffedPlayersMap = new HashMap<>();
     private BukkitScheduler scheduler;
     private BukkitTask task;
+    private BossBar bar;
+    private Map<Player, BossBar> cuffBars = new HashMap<>();
+
 
     private static final double HORIZONTAL_PULL_MULTIPLIER = 0.02; // strength per block of distance
     private static final double MAX_PULL_STRENGTH = 3.0;           // max horizontal pull
     private static final double MIN_PULL_DISTANCE = 5.0;           // min distance to start pulling
     private static final double MIN_TELEPORT_DISTANCE = 15.0;      // distance to force teleport
-
-
-
 
 
     public HandcuffLogic(Handcuffs plugin) {
@@ -51,12 +53,19 @@ public class HandcuffLogic implements Listener {
         Player player = event.getPlayer();
         ItemStack item = player.getInventory().getItemInMainHand();
 
-        if (!item.hasItemMeta()) return
+        if (item.getItemMeta() == null) return;
         if (!item.getType().equals(Material.BLAZE_ROD) && !item.getItemMeta().getPersistentDataContainer().has(new NamespacedKey(plugin, "cuff_item"))) return;
         if (!(event.getRightClicked() instanceof Player interactedPlayer)) return;
 
         if (cuffedPlayersMap.containsKey(interactedPlayer) && Objects.equals(cuffedPlayersMap.get(interactedPlayer), player)) {
             player.sendMessage(Colorize.format("&cYou have unhandcuffed " + interactedPlayer.getName()));
+            interactedPlayer.sendMessage(Colorize.format("&cYou have been uncuffed by by " + ChatColor.GOLD + player.getName()));
+            BossBar bar = cuffBars.get(interactedPlayer);
+            bar.removeAll();
+            cuffBars.remove(player);
+
+            player.getWorld().playSound(interactedPlayer.getLocation(), Sound.BLOCK_CHAIN_BREAK, 1f, 1f);
+            player.getWorld().playSound(interactedPlayer.getLocation(), Sound.BLOCK_WOODEN_TRAPDOOR_OPEN, 0.8f, 1.2f);
             cuffedPlayersMap.remove(interactedPlayer);
             return;
         }
@@ -70,6 +79,20 @@ public class HandcuffLogic implements Listener {
         }
 
         player.sendMessage(Colorize.format("&cYou have handcuffed " + interactedPlayer.getName()));
+
+        bar = Bukkit.createBossBar(ChatColor.RED + "⛓ You have been cuffed by " + ChatColor.GOLD + player.getName(),
+                BarColor.RED,
+                BarStyle.SEGMENTED_10
+        );
+        bar.setProgress(1.0);
+        bar.addPlayer(interactedPlayer);
+        bar.setVisible(true);
+
+        cuffBars.put(interactedPlayer, bar);
+
+        player.getLocation().getWorld().playSound(interactedPlayer.getLocation(), Sound.BLOCK_CHAIN_PLACE, 1f, 1f);
+        player.getLocation().getWorld().playSound(interactedPlayer.getLocation(), Sound.ITEM_ARMOR_EQUIP_IRON, 0.5f, 1f);
+
         cuffedPlayersMap.put(interactedPlayer, player);
         start();
     }
@@ -105,6 +128,9 @@ public class HandcuffLogic implements Listener {
 
 
             Vector forward = captor.getLocation().toVector().subtract(player.getLocation().toVector());
+            if (forward.lengthSquared() < 0.0001) {
+                continue;
+            }
             forward.setY(0);
             forward.normalize();
 
