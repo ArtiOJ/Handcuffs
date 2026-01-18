@@ -6,9 +6,13 @@ import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerInteractAtEntityEvent;
+import org.bukkit.event.player.PlayerKickEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitScheduler;
@@ -27,6 +31,7 @@ public class HandcuffLogic implements Listener {
     private BukkitTask task;
     private BossBar bar;
     private Map<Player, BossBar> cuffBars = new HashMap<>();
+    private Map<Player, Player> disconnectedMap = new HashMap<>();
 
 
     private static final double HORIZONTAL_PULL_MULTIPLIER = 0.02; // strength per block of distance
@@ -95,6 +100,46 @@ public class HandcuffLogic implements Listener {
 
         cuffedPlayersMap.put(interactedPlayer, player);
         start();
+    }
+
+    @EventHandler
+    public void onPlayerDeath(PlayerDeathEvent event) {
+        playerDisconnect(event.getPlayer());
+    }
+
+    @EventHandler
+    public void onPlayerKick(PlayerKickEvent event) {
+        playerDisconnect(event.getPlayer());
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        if (!cuffedPlayersMap.containsValue(player) || !cuffedPlayersMap.containsKey(player)) return;
+        if (cuffedPlayersMap.containsKey(player)) {
+            disconnectedMap.put(player, cuffedPlayersMap.get(player));
+            cuffedPlayersMap.remove(player);
+            return;
+        }
+        cuffedPlayersMap.entrySet().removeIf(entry -> entry.getValue().equals(player));
+
+        player.sendMessage(Colorize.format("&cYou have been uncuffed by by " + ChatColor.GOLD + player.getName()));
+        BossBar bar = cuffBars.get(player);
+        bar.removeAll();
+        cuffBars.remove(player);
+
+        player.getWorld().playSound(player.getLocation(), Sound.BLOCK_CHAIN_BREAK, 1f, 1f);
+        player.getWorld().playSound(player.getLocation(), Sound.BLOCK_WOODEN_TRAPDOOR_OPEN, 0.8f, 1.2f);
+    }
+
+    private void playerDisconnect(Player player) {
+        if (cuffedPlayersMap.containsKey(player)) {
+            cuffedPlayersMap.remove(player);
+            return;
+        }
+        if (cuffedPlayersMap.containsValue(player)) {
+            cuffedPlayersMap.entrySet().removeIf(entry -> entry.getValue().equals(player));
+        }
     }
 
     private void start() {
