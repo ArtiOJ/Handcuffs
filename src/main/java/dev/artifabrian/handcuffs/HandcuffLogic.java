@@ -62,7 +62,7 @@ public class HandcuffLogic implements Listener {
             interactedPlayer.sendMessage(Colorize.format("&cYou have been uncuffed by by " + ChatColor.GOLD + player.getName()));
             BossBar bar = cuffBars.get(interactedPlayer);
             bar.removeAll();
-            cuffBars.remove(player);
+            cuffBars.remove(interactedPlayer);
 
             player.getWorld().playSound(interactedPlayer.getLocation(), Sound.BLOCK_CHAIN_BREAK, 1f, 1f);
             player.getWorld().playSound(interactedPlayer.getLocation(), Sound.BLOCK_WOODEN_TRAPDOOR_OPEN, 0.8f, 1.2f);
